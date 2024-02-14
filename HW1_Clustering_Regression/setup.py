@@ -1,4 +1,9 @@
 import numpy as np
+from numpy import array
+from numpy.linalg import inv
+from numpy.linalg import qr
+from matplotlib import pyplot
+
 
 class Clustering():
     def __init__(self, k:int, initial_centroids:np.array, points:np.array):
@@ -79,7 +84,7 @@ class Clustering():
             wcss_values.append(wcss)
         return wcss_values,k_select
 
-class LogisticRegression:
+class Regression:
     def __init__(self,mode:str = 'logistic', learning_rate=0.01, num_iterations=1000):
         self.mode = mode
         self.learning_rate = learning_rate
@@ -98,23 +103,23 @@ class LogisticRegression:
         return cost
 
     def gradient_descent(self, X, y):
-        num_samples, num_features = X.shape
+        num_samples = len(y)
         # Linear combination
         linear_model = np.dot(X, self.weights) + self.bias
         # Sigmoid function
         if self.mode == 'logistic':
             y_predicted = self.sigmoid(linear_model)
-        if self.mode == 'linear':
+        elif self.mode == 'linear':
             y_predicted = linear_model
 
         # Compute gradients
         dw = (1 / num_samples) * np.dot(X.T, (y_predicted - y))
         db = (1 / num_samples) * np.sum(y_predicted - y)
-        return dw, db,y_predicted
+        return dw, db, y_predicted
     
     def fit(self, X, y):
         num_samples, num_features = X.shape
-        self.weights = np.zeros((num_features, 1))* 0.01  # Initialize as a column vector
+        self.weights = np.zeros((num_features, 1)) 
         self.bias = 0                
         
         # Gradient Descent
@@ -129,8 +134,14 @@ class LogisticRegression:
                 # Compute and store the cost
                 self.cost = self.compute_cost(y, y_predicted)
                 self.cost_history.append(self.cost)
+            elif self.mode == 'linear':
+                # Compute and store the cost
+                y_pre = self.sigmoid(y_predicted)
+                self.cost = self.compute_cost(y,y_pre)
+                self.cost_history.append(self.cost)
+                # self.cost = 'no cost for linear regression'
+                # self.cost_history.append(self.cost)
                 
-        
     def predict_prob(self, X):
         linear_model = np.dot(X, self.weights) + self.bias
         if self.mode == 'logistic':
@@ -158,6 +169,26 @@ class LogisticRegression:
     def RMS_error(self,true,pred):
         mse_train = np.mean((pred - true) ** 2)
         return mse_train
+    
+    def Matrix_inversion(self, X, y, threshold=0.5):
+        num_samples, num_features = X.shape
+        X = X.reshape((len(X), num_features))
+        # QR decomposition
+        Q, R = qr(X)
+        b = inv(R).dot(Q.T).dot(y)
+        yhat = X.dot(b)
+        for prob in yhat:
+            if prob >= threshold:
+                predictions = 1
+                list_predict.append(predictions)
+            else:
+                predictions = 0
+                list_predict.append(predictions)
+        return predictions,list_predict,np.array(yhat)
+        # X_transpose = X.T
+        # X_transpose_X = np.dot(X_transpose, X)
+        # X_transpose_X_inv = np.linalg.inv(X_transpose_X)    
+        # return np.dot(np.dot(X_transpose_X_inv, X_transpose), y)
 
 class Accuracy():
     def __init__(self, true, pred):
@@ -208,7 +239,7 @@ y_train = np.array([[1], [1], [0], [1], # Add more labels...
                     [0]])
 
 # Instantiate and train the model
-model = LogisticRegression('logistic',0.0012,50000)
+model = Regression('linear',0.0012,50000)
 model.fit(x_train, y_train)
 
 # Plot the cost function
@@ -222,6 +253,8 @@ plt.show()
 
 print(model.cost)
 train_predictions,list_predict,list_prob = model.predict(x_train)
+print(list_prob)
+print("RMSE",model.RMS_error(y_train, list_prob))
 
 Accuracy_model = Accuracy(y_train, list_predict)
 
@@ -229,3 +262,30 @@ print("Accuracy :", Accuracy_model.accuracy())
 print("Precision :", Accuracy_model.precision())
 print("Recall :", Accuracy_model.recall())
 print("f1_score :", Accuracy_model.f1_score())
+
+
+model1 = Regression()
+predictions,list_predict,yhat = model1.Matrix_inversion(x_train, y_train)
+print("RMSE",model.RMS_error(y_train, yhat))
+# train_predictions,list_predict,list_prob = model.predict(yhat)
+print(yhat)
+# Plotting
+plt.scatter(x_train[:, 2], y_train, label='Actual')
+plt.plot(x_train[:, 2], yhat, color='red', label='Predicted')
+plt.xlabel('Feature 3')
+plt.ylabel('Target')
+plt.legend()
+plt.show()
+# # Make sure x_train and y_train have the same length
+# if len(x_train) == len(y_train):
+#     plt.scatter(x_train, y_train)
+#     plt.plot(x_train, yhat, color='red')
+#     plt.show()
+# else:
+#     print("Error: x_train and y_train must have the same length.")
+
+# pyplot.scatter(x_train, y_train)
+# pyplot.plot(x_train, yhat, color='red')
+# pyplot.show()
+
+
