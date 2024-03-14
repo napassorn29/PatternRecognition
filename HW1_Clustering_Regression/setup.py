@@ -91,16 +91,16 @@ class Regression:
         self.num_iterations = num_iterations
         self.weights = None
         self.bias = None
-        self.cost_history = []  # Store the cost history during training
+        self.MSE_history = []  # Store the cost history during training
     
     def sigmoid(self, z):
-        return 1 / (1 + np.exp(-z))
+        return np.where(z >= 0, 1 / (1 + np.exp(-z)), np.exp(z) / (1 + np.exp(z)))
     
-    def compute_cost(self, y, y_predicted):
-        # Binary Cross-Entropy Loss
-        epsilon = 1e-15  # Small value to prevent log(0)
-        cost = - np.mean(y * np.log(y_predicted + epsilon) + (1 - y) * np.log(1 - y_predicted + epsilon))
-        return cost
+    # def compute_cost(self, y, y_predicted):
+    #     # Binary Cross-Entropy Loss
+    #     epsilon = 1e-15  # Small value to prevent log(0)
+    #     cost = - np.mean(y * np.log(y_predicted + epsilon) + (1 - y) * np.log(1 - y_predicted + epsilon))
+    #     return cost
 
     def gradient_descent(self, X, y):
         num_samples = len(y)
@@ -132,13 +132,13 @@ class Regression:
 
             if self.mode == 'logistic':
                 # Compute and store the cost
-                self.cost = self.compute_cost(y, y_predicted)
-                self.cost_history.append(self.cost)
+                self.MSE = self.RMS_error(y, y_predicted)
+                self.MSE_history.append(self.MSE)
             elif self.mode == 'linear':
                 # Compute and store the cost
-                y_pre = self.sigmoid(y_predicted)
-                self.cost = self.compute_cost(y,y_pre)
-                self.cost_history.append(self.cost)
+                # y_pre = self.sigmoid(y_predicted)
+                self.MSE = self.RMS_error(y,y_predicted)
+                self.MSE_history.append(self.MSE)
                 # self.cost = 'no cost for linear regression'
                 # self.cost_history.append(self.cost)
                 
@@ -167,8 +167,8 @@ class Regression:
         return predictions,list_predict,list_prob
     
     def RMS_error(self,true,pred):
-        mse_train = np.mean((pred - true) ** 2)
-        return mse_train
+        mse = np.mean((pred - true) ** 2)
+        return mse
     
     def Matrix_inversion(self, X, y, threshold=0.5):
         num_samples, num_features = X.shape
@@ -228,33 +228,32 @@ class Accuracy():
     
 
 # Example usage
-x_train = np.array([[1., 0., 38., 1.],
-                    [1., 0., 35., 0.],
-                    [1., 1., 54., 0.],
-                    [3., 0., 4., 0.],
-                    # Add more rows...
-                    [1., 1., 24., 1.]])
+x_train = np.array([[3., 1., 22., 0.],
+                    [1., 0., 38., 1.],
+                    [3., 0., 26., 0.],
+                    [3., 0., 24., 0.],
+                    [1., 1., 26., 1.],
+                    [3., 1., 32., 2.]])
 
-y_train = np.array([[1], [1], [0], [1], # Add more labels...
-                    [0]])
+y_train = np.array([[0], [1], [1], [1], [0], [0]])
 
 # Instantiate and train the model
-model = Regression('linear',0.0012,50000)
+model = Regression('logistic',0.0012,50000)
 model.fit(x_train, y_train)
 
 # Plot the cost function
 import matplotlib.pyplot as plt
 
-plt.plot(range(1, model.num_iterations + 1), model.cost_history)
+plt.plot(range(1, model.num_iterations + 1), model.MSE_history)
 plt.xlabel('Iterations')
 plt.ylabel('Cost')
 plt.title('Cost Function')
 plt.show()
 
-print(model.cost)
+print(model.MSE)
 train_predictions,list_predict,list_prob = model.predict(x_train)
 print(list_prob)
-print("RMSE",model.RMS_error(y_train, list_prob))
+print("MSE",model.RMS_error(y_train, list_prob))
 
 Accuracy_model = Accuracy(y_train, list_predict)
 
